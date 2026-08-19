@@ -21,7 +21,9 @@ const aiRoutes = require("./routes/aiRoutes");
 // SOCKET
 // =====================================================
 
-const queueSocket = require("./socket/queueSocket");
+// IMPORTANT:
+// Actual file name is queuesocket.js
+const queueSocket = require("./socket/queuesocket");
 
 // =====================================================
 // EXPRESS APP
@@ -36,16 +38,64 @@ const app = express();
 connectDB();
 
 // =====================================================
-// MIDDLEWARE
+// CORS
 // =====================================================
+
+// In production, set FRONTEND_URL in Render.
+// For local development, localhost:5173 remains supported.
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+];
+
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(
+    process.env.FRONTEND_URL.replace(/\/$/, "")
+  );
+}
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    origin: (origin, callback) => {
+      // Allow requests without an Origin header
+      // such as server-to-server requests.
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      const normalizedOrigin = origin.replace(/\/$/, "");
+
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        return callback(null, true);
+      }
+
+      return callback(
+        new Error("Not allowed by CORS")
+      );
+    },
+
+    methods: [
+      "GET",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "OPTIONS",
+    ],
+
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+    ],
+
     credentials: true,
   })
 );
+
+// =====================================================
+// GENERAL MIDDLEWARE
+// =====================================================
 
 app.use(helmet());
 
@@ -53,7 +103,11 @@ app.use(morgan("dev"));
 
 app.use(express.json());
 
-app.use(express.urlencoded({ extended: true }));
+app.use(
+  express.urlencoded({
+    extended: true,
+  })
+);
 
 // =====================================================
 // API ROUTES
@@ -116,8 +170,24 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: (origin, callback) => {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      const normalizedOrigin = origin.replace(/\/$/, "");
+
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        return callback(null, true);
+      }
+
+      return callback(
+        new Error("Not allowed by Socket.IO CORS")
+      );
+    },
+
     methods: ["GET", "POST"],
+
     credentials: true,
   },
 });
@@ -134,35 +204,56 @@ queueSocket(io);
 
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
-  console.log("");
-  console.log("==============================================");
-  console.log("🏥 AI SMART HOSPITAL QUEUE MANAGEMENT SYSTEM");
-  console.log("==============================================");
-  console.log(
-    `🚀 Server running at: http://localhost:${PORT}`
-  );
-  console.log(
-    `🏠 API Home: http://localhost:${PORT}/`
-  );
-  console.log(
-    `❤️ Health Check: http://localhost:${PORT}/api/health`
-  );
-  console.log(
-    `🔐 Register API: http://localhost:${PORT}/api/auth/register`
-  );
-  console.log(
-    `🔑 Login API: http://localhost:${PORT}/api/auth/login`
-  );
-  console.log(
-    `🤖 AI API: http://localhost:${PORT}/api/ai/predict-waiting-time`
-  );
-  console.log(
-    `⚡ Socket.IO: Enabled`
-  );
-  console.log("==============================================");
-  console.log("");
-});
+server.listen(
+  PORT,
+  "0.0.0.0",
+  () => {
+    console.log("");
+    console.log(
+      "=============================================="
+    );
+    console.log(
+      "🏥 AI SMART HOSPITAL QUEUE MANAGEMENT SYSTEM"
+    );
+    console.log(
+      "=============================================="
+    );
+
+    console.log(
+      `🚀 Server running on port: ${PORT}`
+    );
+
+    console.log(
+      `🏠 API Home: /`
+    );
+
+    console.log(
+      `❤️ Health Check: /api/health`
+    );
+
+    console.log(
+      `🔐 Register API: /api/auth/register`
+    );
+
+    console.log(
+      `🔑 Login API: /api/auth/login`
+    );
+
+    console.log(
+      `🤖 AI API: /api/ai/predict-waiting-time`
+    );
+
+    console.log(
+      "⚡ Socket.IO: Enabled"
+    );
+
+    console.log(
+      "=============================================="
+    );
+
+    console.log("");
+  }
+);
 
 // =====================================================
 // SERVER ERROR HANDLING
