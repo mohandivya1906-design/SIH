@@ -1,6 +1,6 @@
 const express = require("express");
 
-const protect = require("../middleware/authMiddleware");
+const protect = require("../middleware/authmiddleware");
 const allowRoles = require("../middleware/roleMiddleware");
 
 const router = express.Router();
@@ -11,7 +11,7 @@ const router = express.Router();
 
 router.get("/profile", protect, (req, res) => {
   res.status(200).json({
-    success: true,
+    success: true,s
     message: "Protected profile accessed successfully.",
     user: req.user,
   });
